@@ -1,0 +1,41 @@
+---
+- name: upgrade from rhel8 to rhel9
+  hosts: web
+  tasks:
+    - name: Ensure all packages are updated on rhel8
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+
+    - name: Install Leapp and required upgrade repository
+      ansible.builtin.dnf:
+        name:
+          - leapp
+          - leapp-repository
+        state: present
+
+    - name: Run the leapp pre-upgrade check
+      command: leapp preupgrade
+      register: leapp_check
+      ignore_errors: true
+
+    - name: Display leapp pre-upgrade check output
+      debug:
+        var: leapp_check.stdout
+
+    - name: fail the playbook when pre-upgrade fails
+      fail:
+        msg: "pre-upgrade check failed"
+      when: leapp_check.rc != 0
+
+
+    - name: Run the upgrade using Leapp
+      command: leapp upgrade
+      when: leapp_check.rc == 0
+
+
+    - name: Reboot the managed node
+      reboot:
+        reboot_timeout: 36000
+
+

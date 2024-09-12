@@ -1,0 +1,73 @@
+---
+# tasks file for hardening_role_1
+# Partition Design
+# 6
+- block:
+  - name: Use the noexec, nosuid and nodev options in /etc/fstab on the partitions as shown below | State the Backup file
+    ansible.builtin.stat:
+      path: /etc/fstab_backup
+    register: backup_stat
+
+  - name: Use the noexec, nosuid and nodev options in /etc/fstab on the partitions as shown below | Take backup of /etc/fstab
+    ansible.builtin.copy:
+      src: /etc/fstab
+      dest: /etc/fstab_backup
+     when: not backup_stat.stat.exists
+
+
+- block:
+  - name: Check if /dev/mapper/rootvg-home partition exists
+    ansible:builtin.stat:
+      path: /dev/mapper/rootvg-home
+    register: home_partation
+
+  - name: Modify the /etc/fstab file for /home: /dev/mapper/rootvg-home /home ext4 defaults,nodev,nosuid 1 2
+    ansible.builtin.lineinfile:
+      path: /etc/fstab
+      regexp: '^/dev/mapper/rootvg-home'
+      line: '/dev/mapper/rootvg-home /home ext4 defaults,nodev,nosuid 1 2'
+      create: yes
+    when: home_partation.exists
+
+  - name: Remount /home with nodev, nosuid
+    ansible.builtin.shell: mount -o remount /home
+    ignore_errors: yes
+
+
+
+- block:                                         
+  - name: Check if /dev/mapper/rootvg-tmp partition exists               
+    ansible:builtin.stat:                        
+      path: /dev/mapper/rootvg-tmp              
+    register: tmp_partation                     
+                                                 
+  - name: Modify the /etc/fstab file for /tmp: /dev/mapper/rootvg-tmp /tmp ext4 defaults,nodev,noexec,nosuid 1 2              
+    ansible.builtin.lineinfile:                  
+      path: /etc/fstab                           
+      regexp: '^/dev/mapper/rootvg-tmp'         
+      line: '/dev/mapper/rootvg-tmp /tmp ext4 defaults,nodev,noexec,nosuid 1 2'
+      create: yes                                
+    when: tmp_partation.exists                  
+                                                 
+  - name: Remount /tmp with nodev, nosuid       
+    ansible.builtin.shell: mount -o remount /tmp
+    ignore_errors: yes
+
+
+- block:
+  - name: Check if /dev/mapper/rootvg-var partition exists
+    ansible:builtin.stat:
+      path: /dev/mapper/rootvg-var
+    register: tmp_partation
+
+  - name: Modify the /etc/fstab file for /var: /dev/mapper/rootvg-var /var ext4 defaults,nodev,noexec,nosuid 1 2
+    ansible.builtin.lineinfile:
+      path: /etc/fstab
+      regexp: '^/dev/mapper/rootvg-var'
+      line: '/dev/mapper/rootvg-var /var ext4 defaults,nodev,noexec,nosuid 1 2'
+      create: yes
+    when: tmp_partation.exists
+
+  - name: Remount /tmp with nodev, nosuid
+    ansible.builtin.shell: mount -o remount /var
+    ignore_errors: yes

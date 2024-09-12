@@ -1,0 +1,50 @@
+---
+# tasks file for hardening_role_2
+#10  Minimize Boot Services
+
+- name: Minimize the Boot services | services started
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ services_to_start }}"
+  ignore_errors: yes
+ 
+ 
+- name: Minimize the Boot services | services enabled
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop: "{{ services_to_enable }}"
+  ignore_errors: yes
+
+
+- name: Minimize the Boot services | services stopped
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ services_to_stop }}"
+  ignore_errors: yes
+ 
+ 
+- name: Minimize the Boot services | services disable
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop: "{{ services_to_disable }}"
+  ignore_errors: yes
+
+
+#11 Minimize default software
+
+- name: Minimize default software
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - telnet-server
+    - tftp-server
+    - vsftpd
+    - talk
+    - dhcp
+  ignore_errors: yes
+

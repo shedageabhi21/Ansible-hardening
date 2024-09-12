@@ -1,0 +1,6 @@
+---
+- name: The hardening playbook
+  hosts: all
+  roles:
+    #- hardening_role_1
+    - hardening_role_2
