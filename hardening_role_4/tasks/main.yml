@@ -1,2 +1,23 @@
 ---
 # tasks file for hardening_role_4
+# 20 Disable unwanted Accounts
+- block:
+  - name: List unlock accounts
+    ansible.builtin.shell: |
+      egrep -v '.*:\*|:\!' /etc/shadow | awk -F: '{print $1}'
+    register: unlock_accounts
+    changed_when: false
+
+  - name: Print unlocked accounts
+    ansible.builtin.debug:
+      msg: "Unlocked accounts: {{ unlock_accounts.stdout_lines }}"
+
+  - name: Ensure all accounts have 'x' in password field in /etc/passwd
+    ansible.builtin.shell: |
+      grep -v ':x:' /etc/passwd || true
+    register: bad_password_fields
+    changed_when: false
+
+  - name: Print accounts without 'x' in password field
+    ansible.builtin.debug:
+      msg: "Accounts without 'x' in password field: {{ bad_password_fields.stdout_lines }}"
