@@ -21,3 +21,156 @@
   - name: Print accounts without 'x' in password field
     ansible.builtin.debug:
       msg: "Accounts without 'x' in password field: {{ bad_password_fields.stdout_lines }}"
+
+
+
+
+
+#21 Enabling Password Aging
+
+- name: Set PASS_MAX_DAYS To 30 in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MAX_DAYS'
+    line: 'PASS_MAX_DAYS  30'
+
+- name: Set PASS_MIN_DAYS To 1 in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MIN_DAYS'
+    line: 'PASS_MIN_DAYS  1'
+
+- name: Set PASS_MIN_LEN To 14 in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs   
+    regexp: '^PASS_MIN_LEN'
+    line: 'PASS_MIN_LEN  14'
+
+- name: Set PASS_WARN_AGE To 7 in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs   
+    regexp: '^PASS_WARN_AGE'
+    line: 'PASS_WARN_AGE  7'
+
+- name: Set UID_MIN to 500 in /etc/login.defs
+  ansible.builtin.lineinfile: 
+    path: /etc/login.defs   
+    regexp: '^UID_MIN'
+    line: 'UID_MIN  500'
+
+- name: Set  UID_MAX To 60000 in /etc/login.defs
+  ansible.builtin.lineinfile: 
+    path: /etc/login.defs   
+    regexp: '^UID_MAX'
+    line: ' UID_MAX  60000'
+
+- name: Set GID_MIN To 500 in /etc/login.defs
+  ansible.builtin.lineinfile: 
+    path: /etc/login.defs   
+    regexp: '^GID_MIN'
+    line: 'GID_MIN  500'
+
+- name: Set GID_MAX To 60000 in /etc/login.defs
+  ansible.builtin.lineinfile: 
+    path: /etc/login.defs   
+    regexp: '^GID_MAX'
+    line: 'GID_MAX  60000'
+
+- name: Set INACTIVE To 30 in /etc/login.defs
+  ansible.builtin.lineinfile: 
+    path: /etc/default/useradd   
+    regexp: '^INACTIVE='
+    line: 'INACTIVE=30'
+
+
+
+
+
+#22 Enforcing Stronger Passwords
+
+- name: Enforcing Stronger Passwords
+  block:
+    - name: Ensure strong password policies are set in /etc/security/pwquality.conf
+      ansible.builtin.lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: '^#?\s*{{ item.key }}\s*'
+        line: '{{ item.key }} = {{ item.value }}'
+        create: yes
+      loop:
+        - { key: 'difok', value: '4' }
+        - { key: 'minlen', value: '14' }
+        - { key: 'dcredit', value: '1' }
+        - { key: 'ucredit', value: '1' }
+        - { key: 'lcredit', value: '1' }
+        - { key: 'ocredit', value: '1' }
+        - { key: 'minclass', value: '3' }
+        - { key: 'maxrepeat', value: '0' }
+        - { key: 'maxclassrepeat', value: '0' }
+
+
+- name: Ensure pam_pwquality.so is added to /etc/pam.d/passwd
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/passwd
+    regexp: '^#?\s*password\s+required\s+pam_pwquality.so'
+    line: 'password required pam_pwquality.so retry=3'
+    create: yes
+
+
+- name: Edit file /etc/pam.d/system-auth and /etc/pam.d/password-auth and add below entry in password section
+  block:
+    - name: Edit file /etc/pam.d/system-auth
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/system-auth
+        line: 'password requisite pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
+        regexp: '^password\s+requisite\s+pam_pwquality.so'
+        create: yes
+
+    - name: Ensure pam_pwquality is configured in password-auth
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/password-auth
+        regexp: '^password\s+requisite\s+pam_pwquality.so'
+        line: 'password requisite pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
+
+    - name: Ensure pam_unix is configured with remember=5 in system-auth
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/system-auth
+        regexp: '^password\s+sufficient\s+pam_unix.so'
+        line: 'password sufficient pam_unix.so sha512 shadow nullok try_first_pass use_authtok remember=5'
+
+
+
+- name: Configure pam_faillock in system-auth and password-auth files
+  block:
+    - name: Ensure pam_faillock is configured in system-auth
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/system-auth
+        insertafter: '^auth\s+required\s+pam_env.so'
+        line: "{{ item }}"
+      loop:
+        - 'auth required pam_faillock.so preauth silent audit deny=3 unlock_time=600'
+        - 'auth [default=die] pam_faillock.so authfail audit deny=3 unlock_time=600'
+    
+    - name: Ensure pam_faillock is configured in system-auth (account section)
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/system-auth
+        insertafter: '^account\s+required\s+pam_unix.so'
+        line: 'account required pam_faillock.so'
+
+    - name: Ensure pam_faillock is configured in password-auth
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/password-auth
+        insertafter: '^auth\s+required\s+pam_env.so'
+        line: "{{ item }}"
+      loop:
+        - 'auth required pam_faillock.so preauth silent audit deny=3 unlock_time=600'
+        - 'auth [default=die] pam_faillock.so authfail audit deny=3 unlock_time=600'
+
+    - name: Ensure pam_faillock is configured in system-auth (account section)
+      ansible.builtin.lineinfile:           
+        path: /etc/pam.d/password-auth        
+        insertafter: '^account\s+required\s+pam_unix.so'
+        line: 'account required pam_faillock.so'
+
+
+
+
