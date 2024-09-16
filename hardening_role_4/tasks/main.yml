@@ -112,7 +112,7 @@
   ansible.builtin.lineinfile:
     path: /etc/pam.d/passwd
     regexp: '^#?\s*password\s+required\s+pam_pwquality.so'
-    line: 'password required pam_pwquality.so retry=3'
+    line: 'password        required                                    pam_pwquality.so retry=3'
     create: yes
 
 
@@ -121,7 +121,7 @@
     - name: Edit file /etc/pam.d/system-auth
       ansible.builtin.lineinfile:
         path: /etc/pam.d/system-auth
-        line: 'password requisite pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
+        line: 'password    requisite                                     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
         regexp: '^password\s+requisite\s+pam_pwquality.so'
         create: yes
 
@@ -129,13 +129,13 @@
       ansible.builtin.lineinfile:
         path: /etc/pam.d/password-auth
         regexp: '^password\s+requisite\s+pam_pwquality.so'
-        line: 'password requisite pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
+        line: 'password    requisite                                    pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=password'
 
     - name: Ensure pam_unix is configured with remember=5 in system-auth
       ansible.builtin.lineinfile:
         path: /etc/pam.d/system-auth
         regexp: '^password\s+sufficient\s+pam_unix.so'
-        line: 'password sufficient pam_unix.so sha512 shadow nullok try_first_pass use_authtok remember=5'
+        line: 'password    sufficient                                    pam_unix.so sha512 shadow nullok try_first_pass use_authtok remember=5'
 
 
 
@@ -147,14 +147,14 @@
         insertafter: '^auth\s+required\s+pam_env.so'
         line: "{{ item }}"
       loop:
-        - 'auth required pam_faillock.so preauth silent audit deny=3 unlock_time=600'
-        - 'auth [default=die] pam_faillock.so authfail audit deny=3 unlock_time=600'
+        - 'auth        required                                   pam_faillock.so preauth silent audit deny=3 unlock_time=600'
+        - 'auth        [default=die]                              pam_faillock.so authfail audit deny=3 unlock_time=600'
     
     - name: Ensure pam_faillock is configured in system-auth (account section)
       ansible.builtin.lineinfile:
         path: /etc/pam.d/system-auth
         insertafter: '^account\s+required\s+pam_unix.so'
-        line: 'account required pam_faillock.so'
+        line: 'account    required                                    pam_faillock.so'
 
     - name: Ensure pam_faillock is configured in password-auth
       ansible.builtin.lineinfile:
@@ -174,3 +174,9 @@
 
 
 
+#23 Displaying Login Banners and System Logging
+
+- name: Copy banner template to /etc/issue
+  ansible.builtin.template:
+    src: templates/banner.j2
+    dest: /etc/issue
