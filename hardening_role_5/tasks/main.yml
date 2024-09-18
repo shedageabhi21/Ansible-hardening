@@ -1,0 +1,121 @@
+---
+# 24 System Logging and NTP Configuration
+- name: System Logging and NTP Configuration
+  block:
+    - name: Configure rsyslog to forward logs to central syslog server
+      lineinfile:
+        path: /etc/rsyslog.conf
+        regexp: '^local3.info @'
+        line: 'local3.info @{{ syslog_server_ip }}'
+        state: present
+        create: yes
+
+    - name: Add additional syslog forwarding rules
+      lineinfile:
+        path: /etc/rsyslog.conf
+        regexp: '^\*\.\(emerg;info;err;crit;cron\.\*;authpriv\)'
+        line: '*emerg;*.info;*.err;*.crit;cron.*;*.authpriv @{{ syslog_server_ip }}'
+        state: present
+        create: yes
+
+
+    - name: Configure NTP servers in Chrony
+      lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^server '
+        line: 'server {{ ntp_server_ip }}'
+        state: present
+        create: yes
+
+
+    - name: Restart chronyd service to apply NTP configuration
+      systemd:
+        name: chronyd
+        state: restarted
+
+
+# 25 System Auditing
+- name: System Auditing
+  block:
+    - name: Ensure auditd service is started
+      ansible.builtin.systemd:
+        name: auditd
+        state: started
+        enabled: true
+      ignore_errors: yes
+
+    - name: Ensure buffer size is set correctly in audit.rules
+      lineinfile:
+        path: /etc/audit/rules.d/audit.rules
+        regexp: '^-b'
+        line: '-b 8192'
+        create: yes
+
+    - name: Add other audit rules to /etc/audit/rules.d/audit.rules
+      blockinfile:
+        path: /etc/audit/rules.d/audit.rules
+        block: |
+          -e 2
+          -w /etc/passwd -p wa -k passwd_changes
+          -w /etc/group -p wa -k group_changes
+          -w /etc/shadow -p wa -k shadow_changes
+          -w /etc/gshadow -p wa -k gshadow_changes
+          -w /etc/hosts -p wa -k hosts_changes
+          -w /etc/sudoers -p wa -k sudoers_changes
+          -w /etc/selinux -p wa -k selinux_changes
+          -w /etc/ssh/sshd_config -p wa -k sshd_config
+          -w /etc/resolv.conf -p wa -k resolv_changes
+          -w /etc/pam.d/system-auth -p wa -k system-auth_changes
+          -w /etc/pam.d/password-auth -p wa -k password-auth_changes
+          -w /etc/localtime -p wa -k time-change
+          -w /etc/security/opasswd -p wa -k identity
+          -w /etc/issue.net -p wa -k system-locale
+          -w /etc/sysconfig/network -p wa -k network_file_changes
+          -w /sbin/insmod -p x -k module_insertion
+          -w /sbin/rmmod -p x -k module_deletion
+          -w /sbin/modprobe -p x -k module_probe
+          -w /var/log/lastlog -p wa -k lastlog_changes
+          -w /var/log/faillog -p wa -k faillog_changes
+          -w /var/log/tallylog -p wa -k tallylog_changes
+          -w /var/log/btmp -p wa -k btmp_changes
+          -w /var/run/utmp -p wa -k utmp_changes
+          -w /var/log/wtmp -p wa -k wtmp_changes
+          -a always,exit -F arch=b64 -S mount -F auid>=500 -F auid!=4294967295 -k mounts
+          -a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete
+          -a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k chmod_permission_b64
+          -a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k chmod_permission_b32
+          -a always,exit -F arch=b64 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k chown_permission_b64
+          -a always,exit -F arch=b32 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k chown_permission_b32
+        create: yes
+        insertafter: EOF
+
+    
+    - name: Configure auditd to send logs to central syslog server
+      lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^log_file ='
+        line: 'log_file = @{{ syslog_server_ip }}'
+        backup: yes
+
+    - name: Disable syslog plugin for auditd
+      lineinfile:
+        path: /etc/audisp/plugins.d/syslog.conf
+        regexp: '^active ='
+        line: 'active = no'
+        backup: yes
+
+    - name: Restart auditd service to apply changes
+      systemd:
+        name: auditd
+        state: restarted
+
+
+
+
+
+
+
+
+
+
+

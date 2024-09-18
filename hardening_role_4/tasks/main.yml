@@ -112,7 +112,7 @@
   ansible.builtin.lineinfile:
     path: /etc/pam.d/passwd
     regexp: '^#?\s*password\s+required\s+pam_pwquality.so'
-    line: 'password        required                                    pam_pwquality.so retry=3'
+    line: 'password   required    pam_pwquality.so retry=3'
     create: yes
 
 
@@ -121,7 +121,7 @@
     - name: Edit file /etc/pam.d/system-auth
       ansible.builtin.lineinfile:
         path: /etc/pam.d/system-auth
-        line: 'password    requisite                                     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
+        line: 'password    requisite                                    pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type='
         regexp: '^password\s+requisite\s+pam_pwquality.so'
         create: yes
 
