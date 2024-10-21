@@ -1,0 +1,95 @@
+---
+# 27  Ensure mounting of cramfs filesystems is disabled (Automated)
+- name: Ensure Mounting of cramfs filesystem is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cramfs.conf
+    line: "install cramfs /bin/true"
+    create: yes
+
+- name: Unload the cramfs module
+  ansible.builtin.shell: rmmod cramfs
+  ignore_errors: true
+
+
+# 28  Ensure mounting of squashfs filesystems is disabled (Automated)
+- name: Ensure mounting of squashfs filesystems is disabled 
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/squashfs.conf
+    line: "install squashfs /bin/true"
+    create: yes
+
+- name: Unload the cramfs module
+  ansible.builtin.shell: rmmod squashfs
+  ignore_errors: yes
+
+
+# 29  Ensure mounting of udf filesystems is disabled (Automated)
+- name: Ensure mounting of udf filesystems is disabled            
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/udf.conf
+    line: "install udf /bin/true"
+    create: yes
+      
+- name: Unload the udf module
+  ansible.builtin.shell: rmmod udf
+  ignore_errors: yes
+
+
+# 30 Ensure address space layout randomization (ASLR) is enabled (Automated)
+- name: Ensure address space layout randomization (ASLR) is enabled
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    regexp: "^kernel.randomize_va_space"
+    line: "kernel.randomize_va_space = 2"
+    create: yes
+
+- name: kernel.randomize_va_space
+  ansible.builtin.shell: sysctl -w kernel.randomize_va_space=2
+
+
+# 31 Ensure Samba is not enabled (Automated)
+- name: Check if smb service is enabled
+  ansible.builtin.command: systemctl is-enabled smb
+  register: smb_status
+  ignore_errors: yes
+
+- name: Disable smb service if it is enabled
+  ansible.builtin.service:
+    name: smb
+    state: stopped
+    enabled: false
+  when: smb_status.stdout == "enabled"
+  ignore_errors: yes
+
+
+# 32 Ensure mail transfer agent is configured for local-only mode (Automated)
+- name: Ensure mail transfer agent is configured for local-only mode
+  ansible.builtin.lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: "^inet_interfaces"
+    line: "inet_interfaces = loopback-only"
+    create: yes
+  notify: restart postfix
+
+
+# 33 Ensure NFS is not enabled (Automated) 
+- name: Ensure NFS is not enabled
+  ansible.builtin.service:
+    name: nfs-server
+    state: stopped
+    enabled: false
+  ignore_errors: true
+
+
+# 34 Ensure rpcbind is not enabled (Automated) 
+- name: Ensure rpcbind is not enabled
+  ansible.builtin.service:
+    name: rpcbind
+    state: stopped
+    enabled: false
+  ignore_errors: true
+
+
+
+
+

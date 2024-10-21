@@ -1,0 +1,6 @@
+---
+# handlers file for hardening_role_6
+- name: restart postfix
+  ansible.builtin.systemd:
+    name: postfix
+    state: restarted
