@@ -18,7 +18,7 @@
     line: "install squashfs /bin/true"
     create: yes
 
-- name: Unload the cramfs module
+- name: Unload the squashfs module
   ansible.builtin.shell: rmmod squashfs
   ignore_errors: yes
 
@@ -66,7 +66,7 @@
 - name: Ensure mail transfer agent is configured for local-only mode
   ansible.builtin.lineinfile:
     path: /etc/postfix/main.cf
-    regexp: "^inet_interfaces"
+    regexp: '^\s*#?\s*inet_interfaces'
     line: "inet_interfaces = loopback-only"
     create: yes
   notify: restart postfix
@@ -88,6 +88,81 @@
     state: stopped
     enabled: false
   ignore_errors: true
+
+
+# 35  Ensure DCCP is disabled (Automated)
+- name: Ensure DCCP is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/dccp.conf
+    line: "install dccp /bin/true"
+    create: yes
+
+- name: Unload the dccp module
+  ansible.builtin.shell: rmmod dccp
+  ignore_errors: yes
+
+
+# 36  Ensure SCTP is disabled (Automated)
+- name: Ensure SCTP is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/sctp.conf
+    line: "install sctp /bin/true"
+    create: yes
+
+- name: Unload the sctp module
+  ansible.builtin.shell: rmmod sctp
+  ignore_errors: yes
+
+
+# 37  Ensure rds is disabled (Automated)
+- name: Ensure RDS is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/rds.conf
+    line: "install rds /bin/true"
+    create: yes
+
+- name: Unload the rds module
+  ansible.builtin.shell: rmmod rds
+  ignore_errors: yes
+
+
+# 38  Ensure TIPC is disabled (Automated)
+- name: Ensure tipc is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/tipc.conf
+    line: "install tipc /bin/true"
+    create: yes
+
+- name: Unload the tipc module
+  ansible.builtin.shell: rmmod tipc
+  ignore_errors: yes
+
+
+# 39 Ensure wireless interfaces are disabled (Automated)
+- name: Ensure wireless interfaces are disabled
+  ansible.builtin.shell: nmcli radio all off
+
+
+# 40 Ensure journald is configured to compress large log files (Automated)
+- name: Ensure journald is configured to compress large log files
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/journald.conf
+    regexp: '^\s*#?\s*Compress='
+    line: "Compress=yes"
+
+
+# 41-43 Ensure SSH PermitUserEnvironment,ClientAliveInterval,ClientAliveCountMax,MaxStartups is Configure (Automated)
+- name: Ensure SSH PermitUserEnvironment,ClientAliveInterval,ClientAliveCountMax,MaxStartups are Configured
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '\s*#?\s*{{ item.key }}\s*'
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: 'PermitUserEnvironment', value: 'no' }
+    - { key: 'ClientAliveInterval', value: '900' }
+    - { key: 'ClientAliveCountMax', value: '0' }
+    - { key: 'MaxStartups', value: '10:30:60' }
+  notify: Restart sshd
 
 
 
